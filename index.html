@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>Cash Flow Tracker</title>
+  <style>
+    :root {
+      --green:       #0F6E56;
+      --green-light: #E1F5EE;
+      --red:         #993C1D;
+      --red-light:   #FAECE7;
+      --blue:        #1D5F99;
+      --blue-light:  #E7F0FA;
+      --bg:          #F7F8FA;
+      --surface:     #FFFFFF;
+      --border:      #E4E6EB;
+      --text:        #1A1A1A;
+      --muted:       #6B7280;
+      --radius:      14px;
+      --radius-sm:   9px;
+      --shadow:      0 1px 4px rgba(0,0,0,0.07);
+      --fs-xs:       clamp(10px, 2.8vw, 12px);
+      --fs-sm:       clamp(12px, 3.2vw, 14px);
+      --fs-md:       clamp(14px, 3.8vw, 16px);
+      --fs-lg:       clamp(17px, 4.5vw, 22px);
+      --fs-xl:       clamp(20px, 5.5vw, 26px);
+      --pad:         clamp(12px, 4vw, 20px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+      font-size: var(--fs-md);
+    }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--surface);
+      padding: var(--pad) var(--pad) 12px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .header h1 { font-size: var(--fs-lg); font-weight: 700; color: var(--text); line-height: 1.2; }
+    .header h1 span { color: var(--green); }
+    .header-sub { font-size: var(--fs-xs); color: var(--muted); margin-top: 3px; }
+
+    /* ── SUMMARY CARDS ── */
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(8px, 2.5vw, 12px);
+      padding: var(--pad);
+      padding-bottom: 0;
+    }
+    .sum-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: clamp(10px, 3vw, 16px);
+      box-shadow: var(--shadow);
+    }
+    .sum-card .lbl {
+      font-size: var(--fs-xs);
+      color: var(--muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 5px;
+    }
+    .sum-card .val { font-size: var(--fs-lg); font-weight: 700; letter-spacing: -0.5px; }
+    .inflow-val { color: var(--green); }
+    .outflow-val { color: var(--red); }
+    .net-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: clamp(10px, 3vw, 16px);
+      box-shadow: var(--shadow);
+      grid-column: span 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .net-card .lbl { font-size: var(--fs-xs); color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px; }
+    .net-card .val { font-size: var(--fs-xl); font-weight: 700; letter-spacing: -0.5px; }
+    .txn-count-badge {
+      background: var(--bg);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: var(--fs-xs);
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* ── TABS ── */
+    .tab-bar {
+      display: flex;
+      margin: var(--pad) var(--pad) 0;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 4px;
+      box-shadow: var(--shadow);
+      gap: 3px;
+    }
+    .tab {
+      flex: 1;
+      padding: clamp(8px, 2.5vw, 11px) 0;
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      border-radius: var(--radius-sm);
+      transition: all 0.18s ease;
+    }
+    .tab.active-main { background: var(--text); color: #fff; }
+    .tab.active-in   { background: var(--green); color: #fff; }
+    .tab.active-out  { background: var(--red);   color: #fff; }
+    .tab.active-transfer { background: var(--blue); color: #fff; }
+
+    /* ── PANE ── */
+    .pane {
+      flex: 1;
+      padding: var(--pad);
+      padding-top: clamp(12px, 3vw, 16px);
+      overflow-y: auto;
+    }
+
+    /* ── TYPE TOGGLE ── */
+    .type-toggle {
+      display: flex;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 4px;
+      gap: 3px;
+      box-shadow: var(--shadow);
+      margin-bottom: clamp(12px, 3.5vw, 18px);
+    }
+
+    /* ── FORM ── */
+    .form-group { margin-bottom: clamp(10px, 3vw, 14px); }
+    .form-group label {
+      font-size: var(--fs-xs);
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: block;
+      margin-bottom: 5px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      font-size: var(--fs-md);
+      padding: clamp(10px, 3vw, 13px) clamp(10px, 3vw, 14px);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .form-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--green); }
+    .form-group input.transfer-focus:focus,
+    .form-group select.transfer-focus:focus { border-color: var(--blue); }
+    .form-group textarea { height: clamp(56px, 15vw, 72px); resize: none; }
+
+    .btn-add-in, .btn-add-out, .btn-add-transfer {
+      width: 100%;
+      padding: clamp(13px, 3.5vw, 16px);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: var(--fs-md);
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+      letter-spacing: 0.2px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-add-in  { background: var(--green); }
+    .btn-add-out { background: var(--red); }
+    .btn-add-transfer { background: var(--blue); }
+    .btn-add-in:active, .btn-add-out:active, .btn-add-transfer:active { opacity: 0.88; transform: scale(0.99); }
+
+    /* Transfer arrow indicator */
+    .transfer-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: -4px 0 10px;
+      color: var(--blue);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    /* ── LOG ── */
+    .filter-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .filter-row select { flex: 1; }
+
+    .txn-list { display: flex; flex-direction: column; gap: clamp(6px, 2vw, 9px); }
+    .txn-item {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: clamp(10px, 3vw, 14px) clamp(12px, 3.5vw, 16px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+    }
+    .txn-item.transfer-item {
+      border-left: 3px solid var(--blue);
+    }
+    .txn-left { flex: 1; min-width: 0; margin-right: 10px; }
+    .txn-desc {
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .txn-meta { font-size: var(--fs-xs); color: var(--muted); margin-top: 3px; line-height: 1.4; }
+    .txn-right { text-align: right; flex-shrink: 0; }
+    .txn-amount { font-size: var(--fs-sm); font-weight: 700; }
+    .txn-delete {
+      font-size: var(--fs-xs);
+      color: var(--muted);
+      cursor: pointer;
+      margin-top: 4px;
+      display: block;
+      text-decoration: underline;
+    }
+    .transfer-badge {
+      display: inline-block;
+      background: var(--blue-light);
+      color: var(--blue);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 20px;
+      margin-right: 4px;
+      letter-spacing: 0.3px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 40px 0;
+      color: var(--muted);
+      font-size: var(--fs-sm);
+    }
+    .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+    /* ── SAVE / RECALL ── */
+    .section-sep {
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .btn-export {
+      width: 100%;
+      padding: clamp(13px, 3.5vw, 16px);
+      border: none;
+      border-radius: var(--radius);
+      background: var(--green);
+      color: #fff;
+      font-size: var(--fs-md);
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 20px;
+      transition: opacity 0.15s;
+    }
+    .btn-export:active { opacity: 0.88; }
+
+    .import-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: clamp(20px, 6vw, 28px) 20px;
+      text-align: center;
+      cursor: pointer;
+      margin-bottom: 12px;
+      background: var(--surface);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .import-zone:active { border-color: var(--green); background: var(--green-light); }
+    .import-zone .icon { font-size: clamp(28px, 8vw, 36px); margin-bottom: 8px; }
+    .import-zone strong { font-size: var(--fs-md); color: var(--text); display: block; }
+    .import-zone p { font-size: var(--fs-xs); color: var(--muted); margin-top: 4px; }
+    .import-zone input { display: none; }
+
+    .import-options { display: none; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .import-options.visible { display: flex; }
+    .import-label { font-size: var(--fs-xs); color: var(--muted); margin-bottom: 2px; }
+    .opt-btn {
+      padding: clamp(12px, 3vw, 14px) 16px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      font-size: var(--fs-sm);
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .opt-btn:active { background: var(--bg); border-color: var(--green); }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: clamp(16px, 5vw, 28px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1A1A1A;
+      color: #fff;
+      padding: 11px 22px;
+      border-radius: 30px;
+      font-size: var(--fs-sm);
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity 0.25s;
+      pointer-events: none;
+      z-index: 999;
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    }
+    .toast.show { opacity: 1; }
+
+    /* ── SETTINGS PANE ── */
+    .settings-section {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+      overflow: hidden;
+    }
+    .settings-section-title {
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      padding: 12px var(--pad) 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .settings-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px var(--pad);
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+    .settings-item:last-child { border-bottom: none; }
+    .settings-item-name {
+      font-size: var(--fs-sm);
+      font-weight: 500;
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .settings-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-icon {
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 5px 11px;
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-icon:active { opacity: 0.75; }
+    .btn-edit { background: var(--blue-light); color: var(--blue); }
+    .btn-del  { background: var(--red-light);  color: var(--red); }
+    .settings-add-row {
+      display: flex;
+      gap: 8px;
+      padding: var(--pad);
+      padding-top: 10px;
+    }
+    .settings-add-row input {
+      flex: 1;
+      font-size: var(--fs-sm);
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    .settings-add-row input:focus { border-color: var(--green); }
+    .btn-add-item {
+      padding: 10px 16px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: var(--green);
+      color: #fff;
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .btn-add-item:active { opacity: 0.85; }
+    .settings-subtabs {
+      display: flex;
+      gap: 3px;
+      margin-bottom: 14px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 4px;
+      box-shadow: var(--shadow);
+    }
+    .subtab {
+      flex: 1;
+      padding: 9px 0;
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      border-radius: var(--radius-sm);
+      transition: all 0.18s;
+    }
+    .subtab.active { background: var(--text); color: #fff; }
+
+    /* Inline edit mode */
+    .settings-item input.inline-edit {
+      flex: 1;
+      font-size: var(--fs-sm);
+      padding: 5px 9px;
+      border: 1.5px solid var(--green);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      min-width: 0;
+    }
+    .btn-save { background: var(--green-light); color: var(--green); }
+
+    /* iOS save modal */
+    .ios-modal-overlay {
+      position: fixed; top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.65);
+      z-index: 9999;
+      display: flex;
+      align-items: flex-end;
+    }
+    .ios-modal {
+      background: #fff;
+      width: 100%;
+      border-radius: 20px 20px 0 0;
+      padding: 28px 24px 44px;
+      font-family: -apple-system, sans-serif;
+    }
+    .ios-modal-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .ios-modal-sub { font-size: 13px; color: #555; margin-bottom: 20px; }
+    .ios-step {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .ios-step-num {
+      background: var(--green);
+      color: #fff;
+      border-radius: 50%;
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px;
+      flex-shrink: 0;
+      margin-right: 12px;
+    }
+    .ios-step-text { font-size: 15px; padding-top: 4px; line-height: 1.45; }
+    .ios-modal-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      margin-top: 8px;
+      cursor: pointer;
+    }
+
+    /* ── EDIT TRANSACTION MODAL ── */
+    .edit-modal-overlay {
+      position: fixed; top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.55);
+      z-index: 9999;
+      display: flex;
+      align-items: flex-end;
+    }
+    .edit-modal {
+      background: var(--surface);
+      width: 100%;
+      border-radius: 20px 20px 0 0;
+      padding: 22px 20px 36px;
+      font-family: -apple-system, sans-serif;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .edit-modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .edit-modal .form-group { margin-bottom: 12px; }
+    .edit-modal-footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .btn-edit-save {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--green);
+      color: #fff;
+      font-size: var(--fs-md);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-edit-cancel {
+      flex: 1;
+      padding: 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: var(--fs-md);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .txn-edit {
+      font-size: var(--fs-xs);
+      color: var(--blue);
+      cursor: pointer;
+      margin-top: 4px;
+      display: block;
+      text-decoration: underline;
+    }
+    .txn-no {
+      font-size: 9px;
+      color: var(--muted);
+      opacity: 0.6;
+      margin-top: 2px;
+      display: block;
+      font-family: monospace;
+    }
+
+    /* ── APP FOOTER ── */
+    .app-footer {
+      text-align: center;
+      padding: 14px var(--pad) 18px;
+      font-size: 10px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      margin-top: auto;
+      letter-spacing: 0.3px;
+    }
+    .app-footer span { color: var(--green); font-weight: 600; }
+
+    /* ── PREFERENCES SECTION ── */
+    .pref-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px var(--pad);
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 10px;
+    }
+    .pref-row label { font-size: var(--fs-sm); color: var(--muted); font-weight: 500; min-width: 110px; }
+    .pref-row input { flex: 1; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: var(--fs-sm); background: var(--bg); }
+    .btn-pref-save {
+      padding: 9px 18px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top" style="justify-content: center; width: 100%;">
+      <div style="width: 100%; text-align: center;">
+        <h1 style="text-align: center; font-weight: bold;">Cash Flow Tracker</h1>
+        <div id="company-name-display" style="font-size: 12px; font-weight: 600; color: var(--green); margin-top: 2px;"></div>
+        <h1 style="text-align: center; font-family: 'Times New Roman', Times, serif; font-size: 10px; color: #05696B;">Ver 10  ·  May 2026</h1>
+        <h1 style="text-align: center; font-family: 'Times New Roman', Times, serif; font-size: 10px; color: darkblue;">Developed by HMC Dubai</h1>
+        <div class="header-sub" id="today-date" style="text-align: center;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary">
+    <div class="sum-card">
+      <div class="lbl">Inflows</div>
+      <div class="val inflow-val" id="total-in">AED 0.00</div>
+    </div>
+    <div class="sum-card">
+      <div class="lbl">Outflows</div>
+      <div class="val outflow-val" id="total-out">AED 0.00</div>
+    </div>
+    <div class="net-card">
+      <div>
+        <div class="lbl">Net Position</div>
+        <div class="val" id="total-net">AED 0.00</div>
+      </div>
+      <div class="txn-count-badge" id="txn-count">0 entries</div>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab active-main" id="tab-add" onclick="switchTab('add')">+ Add</button>
+    <button class="tab" id="tab-log" onclick="switchTab('log')">Log</button>
+    <button class="tab" id="tab-io" onclick="switchTab('io')">Save / Recall</button>
+    <button class="tab" id="tab-settings" onclick="switchTab('settings')">⚙ Lists</button>
+  </div>
+
+  <!-- ADD PANE -->
+  <div class="pane" id="pane-add">
+    <div class="type-toggle">
+      <button class="tab active-in" id="type-in" onclick="switchType('in')">↑ Inflow</button>
+      <button class="tab" id="type-out" onclick="switchType('out')">↓ Outflow</button>
+      <button class="tab" id="type-transfer" onclick="switchType('transfer')">⇄ Transfer</button>
+    </div>
+
+    <!-- Standard inflow/outflow fields -->
+    <div id="standard-fields">
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="f-desc" placeholder="e.g. Customer payment, Salary…" />
+      </div>
+      <div class="form-group">
+        <label class="amount-currency-label">Amount (AED)</label>
+        <input type="number" id="f-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="f-cat"></select>
+      </div>
+      <div class="form-group">
+        <label>Paid from / Received in</label>
+        <select id="f-account">
+          <option value="">— Select account —</option>
+          <option>Cash Seema</option>
+          <option>Cash Jude</option>
+          <option>Cash Bird</option>
+          <option>Cash Ted</option>
+          <option>Cash Isa</option>
+          <option>Cash Ros</option>
+          <option>LOM Cash</option>
+          <option>Mashreq Seema</option>
+          <option>Mashreq Jude</option>
+          <option>RAK HMC</option>
+          <option>ENBD Ted</option>
+          <option>ADIB Isa</option>
+          <option>ADIB Ros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="f-date" />
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea id="f-notes" placeholder="Reference numbers, remarks…"></textarea>
+      </div>
+      <button class="btn-add-in" id="btn-submit" onclick="addEntry()">Add Inflow</button>
+    </div>
+
+    <!-- Transfer fields -->
+    <div id="transfer-fields" style="display:none;">
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="t-desc" placeholder="e.g. Move funds to Mashreq…" class="transfer-focus" />
+      </div>
+      <div class="form-group">
+        <label class="amount-currency-label">Amount (AED)</label>
+        <input type="number" id="t-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" class="transfer-focus" />
+      </div>
+      <div class="form-group">
+        <label>From Account</label>
+        <select id="t-from" class="transfer-focus">
+          <option value="">— Select source account —</option>
+          <option>Cash Seema</option>
+          <option>Cash Jude</option>
+          <option>Cash Bird</option>
+          <option>Cash Ted</option>
+          <option>Cash Isa</option>
+          <option>Cash Ros</option>
+          <option>LOM Cash</option>
+          <option>Mashreq Seema</option>
+          <option>Mashreq Jude</option>
+          <option>RAK HMC</option>
+          <option>ENBD Ted</option>
+          <option>ADIB Isa</option>
+          <option>ADIB Ros</option>
+        </select>
+      </div>
+      <div class="transfer-arrow">↓</div>
+      <div class="form-group">
+        <label>To Account</label>
+        <select id="t-to" class="transfer-focus">
+          <option value="">— Select destination account —</option>
+          <option>Cash Seema</option>
+          <option>Cash Jude</option>
+          <option>Cash Bird</option>
+          <option>Cash Ted</option>
+          <option>Cash Isa</option>
+          <option>Cash Ros</option>
+          <option>LOM Cash</option>
+          <option>Mashreq Seema</option>
+          <option>Mashreq Jude</option>
+          <option>RAK HMC</option>
+          <option>ENBD Ted</option>
+          <option>ADIB Isa</option>
+          <option>ADIB Ros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="t-date" class="transfer-focus" />
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea id="t-notes" placeholder="Reference numbers, remarks…" class="transfer-focus"></textarea>
+      </div>
+      <button class="btn-add-transfer" onclick="addTransfer()">⇄ Record Transfer</button>
+    </div>
+  </div>
+
+  <!-- LOG PANE -->
+  <div class="pane" id="pane-log" style="display:none;">
+    <div class="filter-row">
+      <select id="filter-type" onchange="renderLog()">
+        <option value="all">All types</option>
+        <option value="inflow">Inflows only</option>
+        <option value="outflow">Outflows only</option>
+        <option value="transfer">Transfers only</option>
+      </select>
+      <select id="filter-cat" onchange="renderLog()">
+        <option value="all">All categories</option>
+      </select>
+    </div>
+    <div class="filter-row">
+      <select id="filter-account" onchange="renderLog()">
+        <option value="all">All accounts</option>
+        <option>Cash Seema</option>
+        <option>Cash Jude</option>
+        <option>Cash Bird</option>
+        <option>Cash Ted</option>
+        <option>LOM Cash</option>
+        <option>Cash Isa</option>
+        <option>Cash Ros</option>
+        <option>Mashreq Seema</option>
+        <option>Mashreq Jude</option>
+        <option>RAK HMC</option>
+        <option>ENBD Ted</option>
+        <option>ADIB Isa</option>
+        <option>ADIB Ros</option>
+      </select>
+    </div>
+    <div class="txn-list" id="txn-list"></div>
+  </div>
+
+  <!-- SAVE / RECALL PANE -->
+  <div class="pane" id="pane-io" style="display:none;">
+    <div class="section-sep">Save to Excel</div>
+    <button class="btn-export" onclick="exportExcel()">⬇ Export &amp; Save as Excel</button>
+
+    <div class="section-sep">Recall from Excel</div>
+    <div class="import-zone" onclick="document.getElementById('file-input').click()">
+      <div class="icon">📂</div>
+      <strong>Tap to select Excel file</strong>
+      <p>Select a previously exported CashFlow .xlsx file</p>
+      <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleFile(event)" />
+    </div>
+    <div class="import-options" id="import-options">
+      <p class="import-label">File loaded: <strong id="file-name"></strong></p>
+      <button class="opt-btn" onclick="importData('merge')">⊕ &nbsp;Merge with current entries</button>
+      <button class="opt-btn" onclick="importData('replace')">↺ &nbsp;Replace all current entries</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS PANE -->
+  <div class="pane" id="pane-settings" style="display:none;">
+
+    <div class="settings-subtabs">
+      <button class="subtab active" id="stab-incat"  onclick="switchSettingsTab('incat')">↑ In</button>
+      <button class="subtab"        id="stab-outcat" onclick="switchSettingsTab('outcat')">↓ Out</button>
+      <button class="subtab"        id="stab-accts"  onclick="switchSettingsTab('accts')">🏦 Accounts</button>
+      <button class="subtab"        id="stab-prefs"  onclick="switchSettingsTab('prefs')">⚙ Prefs</button>
+    </div>
+
+    <!-- Inflow Categories -->
+    <div id="spane-incat">
+      <div class="settings-section">
+        <div class="settings-section-title">Inflow Categories</div>
+        <div id="list-incat"></div>
+        <div class="settings-add-row">
+          <input type="text" id="new-incat" placeholder="New category name…" />
+          <button class="btn-add-item" onclick="addSettingsItem('incat')">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Outflow Categories -->
+    <div id="spane-outcat" style="display:none;">
+      <div class="settings-section">
+        <div class="settings-section-title">Outflow Categories</div>
+        <div id="list-outcat"></div>
+        <div class="settings-add-row">
+          <input type="text" id="new-outcat" placeholder="New category name…" />
+          <button class="btn-add-item" onclick="addSettingsItem('outcat')">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accounts -->
+    <div id="spane-accts" style="display:none;">
+      <div class="settings-section">
+        <div class="settings-section-title">Accounts</div>
+        <div id="list-accts"></div>
+        <div class="settings-add-row">
+          <input type="text" id="new-accts" placeholder="New account name…" />
+          <button class="btn-add-item" onclick="addSettingsItem('accts')">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+    <!-- Preferences Pane -->
+    <div id="spane-prefs" style="display:none;">
+      <div class="settings-section">
+        <div class="settings-section-title">App Preferences</div>
+        <div class="pref-row">
+          <label>Company Name</label>
+          <input type="text" id="pref-company" placeholder="Your company or personal name…" maxlength="60" />
+        </div>
+        <div class="pref-row">
+          <label>Currency Code</label>
+          <input type="text" id="pref-currency" placeholder="e.g. AED, USD, EUR, GBP…" maxlength="5" style="text-transform:uppercase;" />
+        </div>
+        <button class="btn-pref-save" onclick="savePrefs()">✓ Save Preferences</button>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- .app -->
+
+<!-- FOOTER -->
+<div class="app-footer">
+  <span>Highsteps Management Consultancy Dubai</span><br>
+  For Customer Service contact <a href="mailto:s.antony@highstepstraining.com" style="color:var(--green);text-decoration:none;font-weight:600;">s.antony@highstepstraining.com</a>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  const DEFAULT_IN_CATS  = ['Opening Balance','Salary / Wages','Business Revenue','Freelance / Side Income','Rental Income','Investment Returns','Loan Received','Tax Refund','Gift / Bonus','Other Income'];
+  const DEFAULT_OUT_CATS = ['Opening Balance','Rent / Mortgage','Groceries & Provisions','Utilities','Internet & Phone','Transport & Fuel','Vehicle Maintenance','Education & Tuition','Medical & Health','Insurance','Clothing & Apparel','Dining & Eating Out','Entertainment & Recreation','Household Supplies','Home Maintenance & Repairs','Subscriptions & Memberships','Business Supplies','Staff / Payroll','Marketing & Advertising','Professional Services','Bank Charges & Fees','Loan Repayment','Charity & Donations','Travel','Other Expense'];
+  const DEFAULT_ACCOUNTS = ['Cash','Bank Savings','Bank Checking Account','Investment in Shares'];
+
+  // ── USER PREFERENCES ──
+  let currencyCode = localStorage.getItem('cf_currency') || 'AED';
+  let companyName  = localStorage.getItem('cf_company')  || '';
+
+  function savePrefs() {
+    const c = document.getElementById('pref-currency').value.trim().toUpperCase();
+    const n = document.getElementById('pref-company').value.trim();
+    if (!c) { toast('Please enter a currency code (e.g. AED, USD).'); return; }
+    currencyCode = c;
+    companyName  = n;
+    localStorage.setItem('cf_currency', c);
+    localStorage.setItem('cf_company',  n);
+    updateCompanyDisplay();
+    updateCurrencyLabels();
+    updateSummary();
+    toast('✓ Preferences saved!');
+  }
+
+  function loadPrefsForm() {
+    document.getElementById('pref-currency').value = currencyCode;
+    document.getElementById('pref-company').value  = companyName;
+  }
+
+  function updateCompanyDisplay() {
+    const el = document.getElementById('company-name-display');
+    el.textContent = companyName || '';
+    el.style.display = companyName ? 'block' : 'none';
+  }
+
+  function updateCurrencyLabels() {
+    // Update the Amount label in Add form
+    const amtLabel = document.querySelector('label[for="f-amount"], #standard-fields .form-group label');
+    document.querySelectorAll('.amount-currency-label').forEach(el => el.textContent = 'Amount (' + currencyCode + ')');
+    // Update edit modal label if open
+    const emLabel = document.getElementById('em-amount-label');
+    if (emLabel) emLabel.textContent = 'Amount (' + currencyCode + ')';
+  }
+
+  // v10: reset categories & accounts to new defaults
+  localStorage.removeItem('cf_inCats');
+  localStorage.removeItem('cf_outCats');
+  localStorage.removeItem('cf_accounts');
+
+  let inCats   = DEFAULT_IN_CATS.slice();
+  let outCats  = DEFAULT_OUT_CATS.slice();
+  let accounts = DEFAULT_ACCOUNTS.slice();
+
+  function saveLists() {
+    localStorage.setItem('cf_inCats',   JSON.stringify(inCats));
+    localStorage.setItem('cf_outCats',  JSON.stringify(outCats));
+    localStorage.setItem('cf_accounts', JSON.stringify(accounts));
+  }
+
+  function getList(key) {
+    if (key === 'incat')  return inCats;
+    if (key === 'outcat') return outCats;
+    return accounts;
+  }
+
+  // Rebuild all account <select> dropdowns from the accounts array
+  function rebuildAccountSelects() {
+    const opts = accounts.map(a => `<option>${a}</option>`).join('');
+    const blank = `<option value="">— Select account —</option>` + opts;
+    const blankFrom = `<option value="">— Select source account —</option>` + opts;
+    const blankTo   = `<option value="">— Select destination account —</option>` + opts;
+    document.getElementById('f-account').innerHTML = blank;
+    document.getElementById('t-from').innerHTML    = blankFrom;
+    document.getElementById('t-to').innerHTML      = blankTo;
+
+    // Log filter
+    const fa = document.getElementById('filter-account');
+    const cur = fa.value;
+    fa.innerHTML = '<option value="all">All accounts</option>' + opts;
+    if (accounts.includes(cur)) fa.value = cur;
+  }
+
+  // Rebuild category <select> for the current type
+  function rebuildCatSelect() {
+    const cats = currentType === 'in' ? inCats : outCats;
+    const sel  = document.getElementById('f-cat');
+    const cur  = sel.value;
+    sel.innerHTML = cats.map(c => `<option>${c}</option>`).join('');
+    if (cats.includes(cur)) sel.value = cur;
+  }
+
+  // ── SETTINGS TAB ──
+  let currentSettingsTab = 'incat';
+
+  function switchSettingsTab(key) {
+    currentSettingsTab = key;
+    ['incat','outcat','accts','prefs'].forEach(k => {
+      document.getElementById('spane-' + k).style.display = k === key ? 'block' : 'none';
+      document.getElementById('stab-'  + k).className = 'subtab' + (k === key ? ' active' : '');
+    });
+    if (key !== 'prefs') renderSettingsList(key);
+    else loadPrefsForm();
+  }
+
+  function renderSettingsList(key) {
+    const list = getList(key);
+    const el   = document.getElementById('list-' + key);
+    if (!list.length) {
+      el.innerHTML = '<div style="padding:14px var(--pad);color:var(--muted);font-size:var(--fs-sm);">No items yet.</div>';
+      return;
+    }
+    el.innerHTML = list.map((item, idx) => `
+      <div class="settings-item" id="sitem-${key}-${idx}">
+        <span class="settings-item-name">${item}</span>
+        <div class="settings-item-actions">
+          <button class="btn-icon btn-edit" onclick="editSettingsItem('${key}',${idx})">Edit</button>
+          <button class="btn-icon btn-del"  onclick="deleteSettingsItem('${key}',${idx})">Delete</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function addSettingsItem(key) {
+    const input = document.getElementById('new-' + key);
+    const val   = input.value.trim();
+    if (!val) { toast('Please enter a name.'); return; }
+    const list = getList(key);
+    if (list.map(x=>x.toLowerCase()).includes(val.toLowerCase())) { toast('Already exists.'); return; }
+    list.push(val);
+    saveLists();
+    input.value = '';
+    renderSettingsList(key);
+    rebuildAccountSelects();
+    rebuildCatSelect();
+    populateFilterCats();
+    toast('✓ Added: ' + val);
+  }
+
+  function deleteSettingsItem(key, idx) {
+    const list = getList(key);
+    const name = list[idx];
+    if (!confirm('Delete "' + name + '"?')) return;
+    list.splice(idx, 1);
+    saveLists();
+    renderSettingsList(key);
+    rebuildAccountSelects();
+    rebuildCatSelect();
+    populateFilterCats();
+    toast('Deleted: ' + name);
+  }
+
+  function editSettingsItem(key, idx) {
+    const list     = getList(key);
+    const itemEl   = document.getElementById('sitem-' + key + '-' + idx);
+    const nameSpan = itemEl.querySelector('.settings-item-name');
+    const actionsEl= itemEl.querySelector('.settings-item-actions');
+    const oldVal   = list[idx];
+
+    // Replace span with an input
+    nameSpan.outerHTML = `<input class="inline-edit" id="edit-input-${key}-${idx}" type="text" value="${oldVal}" />`;
+    actionsEl.innerHTML = `
+      <button class="btn-icon btn-save" onclick="saveSettingsItem('${key}',${idx})">Save</button>
+      <button class="btn-icon btn-del"  onclick="renderSettingsList('${key}')">Cancel</button>`;
+    document.getElementById('edit-input-' + key + '-' + idx).focus();
+  }
+
+  function saveSettingsItem(key, idx) {
+    const input = document.getElementById('edit-input-' + key + '-' + idx);
+    const val   = input.value.trim();
+    if (!val) { toast('Name cannot be empty.'); return; }
+    const list  = getList(key);
+    if (list.map((x,i)=>i!==idx && x.toLowerCase()).includes(val.toLowerCase())) { toast('Already exists.'); return; }
+    const old = list[idx];
+    list[idx] = val;
+    // Also rename in existing entries
+    if (key === 'incat' || key === 'outcat') {
+      entries.forEach(e => { if (e.cat === old) e.cat = val; });
+      save();
+    } else {
+      entries.forEach(e => {
+        if (e.account === old)     e.account = val;
+        if (e.toAccount === old)   e.toAccount = val;
+        if (e.fromAccount === old) e.fromAccount = val;
+      });
+      save();
+    }
+    saveLists();
+    renderSettingsList(key);
+    rebuildAccountSelects();
+    rebuildCatSelect();
+    populateFilterCats();
+    toast('✓ Renamed to: ' + val);
+  }
+
+  let entries       = JSON.parse(localStorage.getItem('cf_entries_v2') || '[]');
+  let currentType   = 'in';
+  let pendingImport = [];
+
+  function save() { localStorage.setItem('cf_entries_v2', JSON.stringify(entries)); }
+
+  function fmt(n) { return currencyCode + ' ' + Number(n).toLocaleString('en', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  function updateSummary() {
+    const ins  = entries.filter(e => e.type==='inflow').reduce((s,e)  => s+e.amount, 0);
+    const outs = entries.filter(e => e.type==='outflow').reduce((s,e) => s+e.amount, 0);
+    const net  = ins - outs;
+    document.getElementById('total-in').textContent  = fmt(ins);
+    document.getElementById('total-out').textContent = fmt(outs);
+    const netEl = document.getElementById('total-net');
+    netEl.textContent  = fmt(net);
+    netEl.style.color  = net >= 0 ? '#0F6E56' : '#993C1D';
+    document.getElementById('txn-count').textContent = entries.length + ' entr' + (entries.length===1?'y':'ies');
+  }
+
+  function switchTab(tab) {
+    ['add','log','io','settings'].forEach(t => {
+      document.getElementById('pane-'+t).style.display = t===tab ? 'block' : 'none';
+      const btn = document.getElementById('tab-'+t);
+      btn.className = 'tab' + (t===tab ? ' active-main' : '');
+    });
+    if (tab==='log') { renderLog(); populateFilterCats(); }
+    if (tab==='settings') { renderSettingsList(currentSettingsTab); }
+  }
+
+  function switchType(t) {
+    currentType = t;
+
+    // Toggle panels
+    document.getElementById('standard-fields').style.display = t === 'transfer' ? 'none' : 'block';
+    document.getElementById('transfer-fields').style.display = t === 'transfer' ? 'block' : 'none';
+
+    // Tab styling
+    document.getElementById('type-in').className       = 'tab' + (t==='in'       ? ' active-in'       : '');
+    document.getElementById('type-out').className      = 'tab' + (t==='out'      ? ' active-out'      : '');
+    document.getElementById('type-transfer').className = 'tab' + (t==='transfer' ? ' active-transfer' : '');
+
+    if (t !== 'transfer') {
+      const btn = document.getElementById('btn-submit');
+      btn.textContent = t==='in' ? 'Add Inflow' : 'Add Outflow';
+      btn.className   = t==='in' ? 'btn-add-in' : 'btn-add-out';
+      rebuildCatSelect();
+    }
+  }
+
+  function addEntry() {
+    const desc    = document.getElementById('f-desc').value.trim();
+    const amount  = parseFloat(document.getElementById('f-amount').value);
+    const cat     = document.getElementById('f-cat').value;
+    const account = document.getElementById('f-account').value;
+    const date    = document.getElementById('f-date').value;
+    const notes   = document.getElementById('f-notes').value.trim();
+    if (!desc)                      { toast('Please enter a description.'); return; }
+    if (!amount || amount <= 0)     { toast('Please enter a valid amount.'); return; }
+    if (!date)                      { toast('Please select a date.'); return; }
+    const txnNo = generateTxnNo(currentType==='in'?'IN':'OUT');
+    entries.unshift({ id: Date.now(), txnNo, type: currentType==='in'?'inflow':'outflow', desc, amount, cat, account, date, notes });
+    save();
+    updateSummary();
+    document.getElementById('f-desc').value    = '';
+    document.getElementById('f-amount').value  = '';
+    document.getElementById('f-account').value = '';
+    document.getElementById('f-notes').value   = '';
+    toast(currentType==='in' ? '✓ Inflow added!' : '✓ Outflow added!');
+  }
+
+  function addTransfer() {
+    const desc   = document.getElementById('t-desc').value.trim();
+    const amount = parseFloat(document.getElementById('t-amount').value);
+    const from   = document.getElementById('t-from').value;
+    const to     = document.getElementById('t-to').value;
+    const date   = document.getElementById('t-date').value;
+    const notes  = document.getElementById('t-notes').value.trim();
+
+    if (!desc)               { toast('Please enter a description.'); return; }
+    if (!amount || amount<=0){ toast('Please enter a valid amount.'); return; }
+    if (!from)               { toast('Please select the source account.'); return; }
+    if (!to)                 { toast('Please select the destination account.'); return; }
+    if (from === to)         { toast('Source and destination must be different.'); return; }
+    if (!date)               { toast('Please select a date.'); return; }
+
+    const transferId = 'TRF-' + Date.now();
+    const ts = Date.now();
+    const txnNoOut = generateTxnNo('TRF');
+    const txnNoIn  = txnNoOut.replace('TRF-', 'TRF-') + 'b';
+
+    // Record as TWO entries linked by transferId
+    entries.unshift({
+      id: ts + 1,
+      txnNo: txnNoOut,
+      type: 'transfer',
+      transferDir: 'out',
+      transferId,
+      desc,
+      amount,
+      cat: 'Transfer',
+      account: from,
+      toAccount: to,
+      date,
+      notes
+    });
+    entries.unshift({
+      id: ts + 2,
+      txnNo: txnNoOut + 'b',
+      type: 'transfer',
+      transferDir: 'in',
+      transferId,
+      desc,
+      amount,
+      cat: 'Transfer',
+      account: to,
+      fromAccount: from,
+      date,
+      notes
+    });
+
+    save();
+    updateSummary();
+    document.getElementById('t-desc').value   = '';
+    document.getElementById('t-amount').value = '';
+    document.getElementById('t-from').value   = '';
+    document.getElementById('t-to').value     = '';
+    document.getElementById('t-notes').value  = '';
+    toast('⇄ Transfer recorded!');
+  }
+
+  function deleteEntry(id) {
+    const entry = entries.find(e => e.id === id);
+    if (!confirm('Remove this entry?')) return;
+
+    // If it's a transfer, offer to delete the paired entry too
+    if (entry && entry.type === 'transfer' && entry.transferId) {
+      const paired = entries.filter(e => e.transferId === entry.transferId);
+      if (paired.length > 1) {
+        if (confirm('Delete both sides of this transfer?')) {
+          entries = entries.filter(e => e.transferId !== entry.transferId);
+        } else {
+          entries = entries.filter(e => e.id !== id);
+        }
+      } else {
+        entries = entries.filter(e => e.id !== id);
+      }
+    } else {
+      entries = entries.filter(e => e.id !== id);
+    }
+    save(); updateSummary(); renderLog();
+    toast('Entry removed.');
+  }
+
+  function populateFilterCats() {
+    const all = [...new Set(entries.map(e => e.cat))].sort();
+    const sel = document.getElementById('filter-cat');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="all">All categories</option>' + all.map(c => `<option>${c}</option>`).join('');
+    if (all.includes(cur)) sel.value = cur;
+  }
+
+  function renderLog() {
+    const ft = document.getElementById('filter-type').value;
+    const fc = document.getElementById('filter-cat').value;
+    const fa = document.getElementById('filter-account').value;
+    let list = entries.slice();
+    if (ft !== 'all') list = list.filter(e => e.type === ft);
+    if (fc !== 'all') list = list.filter(e => e.cat  === fc);
+    if (fa !== 'all') list = list.filter(e => (e.account||'') === fa || (e.toAccount||'') === fa || (e.fromAccount||'') === fa);
+    const el = document.getElementById('txn-list');
+    if (!list.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>No entries found.</div>';
+      return;
+    }
+    el.innerHTML = list.map(e => {
+      const isTransfer = e.type === 'transfer';
+      const dirLabel   = isTransfer ? (e.transferDir === 'out' ? `→ ${e.toAccount}` : `← ${e.fromAccount}`) : '';
+      const amountColor = isTransfer
+        ? (e.transferDir === 'out' ? '#993C1D' : '#0F6E56')
+        : (e.type==='inflow' ? '#0F6E56' : '#993C1D');
+      const amountSign  = isTransfer
+        ? (e.transferDir === 'out' ? '−' : '+')
+        : (e.type==='inflow' ? '+' : '−');
+      const metaLine = isTransfer
+        ? `<span class="transfer-badge">TRANSFER</span>${e.account}${dirLabel ? ' ' + dirLabel : ''} · ${e.date}${e.notes ? ' · ' + e.notes : ''}`
+        : `${e.cat}${e.account ? ' · ' + e.account : ''} · ${e.date}${e.notes ? ' · ' + e.notes : ''}`;
+
+      return `
+        <div class="txn-item${isTransfer ? ' transfer-item' : ''}">
+          <div class="txn-left">
+            <div class="txn-desc">${e.desc}</div>
+            <div class="txn-meta">${metaLine}</div>
+          </div>
+          <div class="txn-right">
+            <div class="txn-amount" style="color:${amountColor}">${amountSign}${fmt(e.amount)}</div>
+            <span class="txn-edit" onclick="openEditModal(${e.id})">edit</span>
+            <span class="txn-delete" onclick="deleteEntry(${e.id})">remove</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── EXPORT (iOS-fixed) ──
+  function exportExcel() {
+    if (!entries.length) { toast('No entries to export.'); return; }
+
+    const ins  = entries.filter(e => e.type==='inflow').reduce((s,e)  => s+e.amount, 0);
+    const outs = entries.filter(e => e.type==='outflow').reduce((s,e) => s+e.amount, 0);
+
+    const rows = entries.map(e => {
+      let typeLabel = e.type.charAt(0).toUpperCase() + e.type.slice(1);
+      if (e.type === 'transfer') {
+        typeLabel = e.transferDir === 'out' ? 'Transfer Out' : 'Transfer In';
+      }
+      return {
+        'Txn No':    e.txnNo || '',
+        Date:        e.date,
+        Type:        typeLabel,
+        Description: e.desc,
+        Category:    e.cat,
+        Account:     e.account || '',
+        'To/From Account': e.toAccount || e.fromAccount || '',
+        Amount:      e.type==='inflow' ? e.amount : (e.type==='transfer' ? (e.transferDir==='in' ? e.amount : -e.amount) : -e.amount),
+        Notes:       e.notes || ''
+      };
+    });
+
+    rows.push({});
+    rows.push({ 'Txn No':'', Date:'', Type:'', Description:'TOTAL INFLOWS',  Category:'', Account:'', 'To/From Account':'', Amount: ins,       Notes:'' });
+    rows.push({ 'Txn No':'', Date:'', Type:'', Description:'TOTAL OUTFLOWS', Category:'', Account:'', 'To/From Account':'', Amount: -outs,      Notes:'' });
+    rows.push({ 'Txn No':'', Date:'', Type:'', Description:'NET POSITION',   Category:'', Account:'', 'To/From Account':'', Amount: ins - outs, Notes:'' });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows, {
+      header: ['Txn No','Date','Type','Description','Category','Account','To/From Account','Amount','Notes']
+    });
+    ws['!cols'] = [{wch:14},{wch:12},{wch:14},{wch:30},{wch:20},{wch:18},{wch:18},{wch:14},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Cash Flow');
+
+    const fileName = 'CashFlow_' + new Date().toISOString().slice(0,10) + '.xlsx';
+    const wbout   = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob    = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    if (isIOS) {
+      // Most reliable iOS method: object URL + anchor click, then guide the user
+      try {
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement('a');
+        a.href     = url;
+        a.download = fileName;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+        showIOSInstructions();
+      } catch(e) {
+        // Last resort: base64 data URL
+        iosBase64Fallback(wbout, fileName);
+      }
+    } else {
+      // Android / Desktop
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast('✓ Excel file downloaded!');
+    }
+  }
+
+  function iosBase64Fallback(wbout, fileName) {
+    let binary = '';
+    const bytes = new Uint8Array(wbout);
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    const b64     = btoa(binary);
+    const dataUrl = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + b64;
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = fileName;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showIOSInstructions();
+  }
+
+  function showIOSInstructions() {
+    const overlay = document.createElement('div');
+    overlay.className = 'ios-modal-overlay';
+    overlay.innerHTML = `
+      <div class="ios-modal">
+        <div class="ios-modal-title">📥 Save Your Excel File</div>
+        <div class="ios-modal-sub">Follow these steps to save to your iPhone:</div>
+        <div class="ios-step">
+          <div class="ios-step-num">1</div>
+          <div class="ios-step-text">A download prompt may appear at the top of Safari — tap <strong>Download</strong> to accept it.</div>
+        </div>
+        <div class="ios-step">
+          <div class="ios-step-num">2</div>
+          <div class="ios-step-text">If no prompt appeared, tap the <strong>Share button ⬆️</strong> at the bottom of Safari, then tap <strong>"Save to Files"</strong> 📁</div>
+        </div>
+        <div class="ios-step">
+          <div class="ios-step-num">3</div>
+          <div class="ios-step-text">Choose <strong>On My iPhone → Downloads</strong> then tap <strong>Save</strong>. Open with Numbers or Excel.</div>
+        </div>
+        <button class="ios-modal-btn" onclick="this.closest('.ios-modal-overlay').remove()">Got it ✓</button>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+
+  function handleFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb   = XLSX.read(e.target.result, {type:'array'});
+        const ws   = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws);
+        pendingImport = rows
+          .filter(r => r.Type && r.Amount && r.Description)
+          .map(r => {
+            const typeRaw = (r.Type || '').toLowerCase();
+            let type = 'outflow';
+            let transferDir = null;
+            if (typeRaw === 'inflow') type = 'inflow';
+            else if (typeRaw === 'transfer in')  { type = 'transfer'; transferDir = 'in'; }
+            else if (typeRaw === 'transfer out') { type = 'transfer'; transferDir = 'out'; }
+            return {
+              id:          Date.now() + Math.random(),
+              type,
+              transferDir,
+              desc:        r.Description || '',
+              amount:      Math.abs(parseFloat(r.Amount) || 0),
+              cat:         r.Category || (type === 'transfer' ? 'Transfer' : 'Other'),
+              account:     r.Account  || '',
+              toAccount:   r['To/From Account'] || '',
+              date:        r.Date     || new Date().toISOString().slice(0,10),
+              notes:       r.Notes    || ''
+            };
+          })
+          .filter(r => r.amount > 0);
+
+        if (!pendingImport.length) { toast('No valid entries found in file.'); return; }
+        document.getElementById('file-name').textContent = file.name + ' (' + pendingImport.length + ' entries)';
+        document.getElementById('import-options').className = 'import-options visible';
+        toast(pendingImport.length + ' entries ready to import.');
+      } catch(err) {
+        toast('Could not read file. Use an exported CashFlow .xlsx.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    event.target.value = '';
+  }
+
+  function importData(mode) {
+    if (!pendingImport.length) return;
+    if (mode === 'replace') {
+      entries = pendingImport;
+    } else {
+      const existing = new Set(entries.map(e => e.date+'|'+e.desc+'|'+e.amount));
+      const newOnes  = pendingImport.filter(e => !existing.has(e.date+'|'+e.desc+'|'+e.amount));
+      entries = [...newOnes, ...entries];
+    }
+    save(); updateSummary();
+    pendingImport = [];
+    document.getElementById('import-options').className = 'import-options';
+    toast(mode==='replace' ? '✓ Data replaced from Excel!' : '✓ Data merged from Excel!');
+    switchTab('log'); renderLog(); populateFilterCats();
+  }
+
+  // ── TRANSACTION NUMBER GENERATOR ──
+  function generateTxnNo(prefix) {
+    const now   = new Date();
+    const yy    = String(now.getFullYear()).slice(2);
+    const mm    = String(now.getMonth() + 1).padStart(2, '0');
+    const dd    = String(now.getDate()).padStart(2, '0');
+    const seq   = String(entries.length + 1).padStart(4, '0');
+    const rand  = Math.floor(Math.random() * 900 + 100);
+    return `${prefix}-${yy}${mm}${dd}-${seq}-${rand}`;
+  }
+
+  // ── EDIT TRANSACTION MODAL ──
+  function openEditModal(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+
+    const isTransfer = e.type === 'transfer';
+    const cats = e.type === 'inflow' ? inCats : outCats;
+    const catOpts = cats.map(c => `<option${e.cat===c?' selected':''}>${c}</option>`).join('');
+    const acctOpts = accounts.map(a => `<option${e.account===a?' selected':''}>${a}</option>`).join('');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'edit-modal-overlay';
+    overlay.id = 'edit-overlay';
+    overlay.innerHTML = `
+      <div class="edit-modal">
+        <div class="edit-modal-title">✏️ Edit Transaction</div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" id="em-desc" value="${e.desc.replace(/"/g,'&quot;')}" />
+        </div>
+        <div class="form-group">
+          <label>Amount (AED)</label>
+          <input type="number" id="em-amount" value="${e.amount}" min="0" step="0.01" inputmode="decimal" />
+        </div>
+        ${!isTransfer ? `
+        <div class="form-group">
+          <label>Category</label>
+          <select id="em-cat">${catOpts}</select>
+        </div>
+        <div class="form-group">
+          <label>Account</label>
+          <select id="em-account"><option value="">— Select account —</option>${acctOpts}</select>
+        </div>` : ''}
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="em-date" value="${e.date}" />
+        </div>
+        <div class="form-group">
+          <label>Notes (optional)</label>
+          <textarea id="em-notes">${e.notes||''}</textarea>
+        </div>
+        <div class="edit-modal-footer">
+          <button class="btn-edit-cancel" onclick="document.getElementById('edit-overlay').remove()">Cancel</button>
+          <button class="btn-edit-save" onclick="saveEdit(${id})">Save Changes</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+
+  function saveEdit(id) {
+    const idx = entries.findIndex(x => x.id === id);
+    if (idx === -1) return;
+    const e = entries[idx];
+
+    const desc   = document.getElementById('em-desc').value.trim();
+    const amount = parseFloat(document.getElementById('em-amount').value);
+    const date   = document.getElementById('em-date').value;
+    const notes  = document.getElementById('em-notes').value.trim();
+
+    if (!desc)              { toast('Please enter a description.'); return; }
+    if (!amount || amount<=0){ toast('Please enter a valid amount.'); return; }
+    if (!date)              { toast('Please select a date.'); return; }
+
+    entries[idx] = {
+      ...e,
+      desc,
+      amount,
+      date,
+      notes,
+      ...(e.type !== 'transfer' ? {
+        cat:     document.getElementById('em-cat').value,
+        account: document.getElementById('em-account').value
+      } : {})
+    };
+
+    // If transfer, sync the paired leg too
+    if (e.type === 'transfer' && e.transferId) {
+      const pairedIdx = entries.findIndex(x => x.transferId === e.transferId && x.id !== id);
+      if (pairedIdx !== -1) {
+        entries[pairedIdx] = { ...entries[pairedIdx], desc, amount, date, notes };
+      }
+    }
+
+    save(); updateSummary(); renderLog();
+    document.getElementById('edit-overlay').remove();
+    toast('✓ Transaction updated!');
+  }
+
+  // Init
+  document.getElementById('today-date').textContent =
+    new Date().toLocaleDateString('en-AE', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('t-date').value = new Date().toISOString().slice(0,10);
+  rebuildAccountSelects();
+  switchType('in');
+  updateSummary();
+  updateCompanyDisplay();
+  updateCurrencyLabels();
+</script>
+</body>
+</html>
